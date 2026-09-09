@@ -1,0 +1,182 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Zee CV Maker — "Diagonal kinetic glass" design system.
+ * All colors are oklch semantic tokens. Never hardcode colors in components.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+
+  /* Brand aliases from the chosen direction */
+  --color-ink: var(--background);
+  --color-inkline: var(--card);
+  --color-paper: var(--foreground);
+  --color-mist: var(--muted-foreground);
+  --color-line: var(--border);
+  --color-azure: var(--azure);
+
+  --font-display: "Archivo", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  --radius: 0.75rem;
+
+  --background: oklch(0.18 0.023 258);
+  --foreground: oklch(0.947 0.006 259);
+  --card: oklch(0.26 0.026 257);
+  --card-foreground: oklch(0.947 0.006 259);
+  --popover: oklch(0.26 0.026 257);
+  --popover-foreground: oklch(0.947 0.006 259);
+  --primary: oklch(0.8 0.147 168);
+  --primary-foreground: oklch(0.18 0.023 258);
+  --secondary: oklch(0.3 0.024 257);
+  --secondary-foreground: oklch(0.947 0.006 259);
+  --muted: oklch(0.3 0.024 257);
+  --muted-foreground: oklch(0.742 0.032 249);
+  --accent: oklch(0.8 0.147 168);
+  --accent-foreground: oklch(0.18 0.023 258);
+  --destructive: oklch(0.63 0.21 22);
+  --destructive-foreground: oklch(0.98 0.005 259);
+  --border: oklch(0.33 0.026 254);
+  --input: oklch(0.33 0.026 254);
+  --ring: oklch(0.8 0.147 168);
+  --azure: oklch(0.71 0.157 254);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-body);
+    overscroll-behavior-y: none;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+  }
+}
+
+@keyframes drift {
+  0% {
+    transform: translate3d(-14%, 0, 0);
+  }
+  100% {
+    transform: translate3d(14%, 0, 0);
+  }
+}
+
+@keyframes drift2 {
+  0% {
+    transform: translate3d(18%, 0, 0);
+  }
+  100% {
+    transform: translate3d(-18%, 0, 0);
+  }
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@utility kglass {
+  background: linear-gradient(
+    118deg,
+    color-mix(in oklab, var(--color-foreground) 11%, transparent),
+    color-mix(in oklab, var(--color-foreground) 2%, transparent) 55%,
+    color-mix(in oklab, var(--color-primary) 6%, transparent)
+  );
+  backdrop-filter: blur(16px);
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@utility drift-a {
+  animation: drift 9s ease-in-out infinite alternate;
+}
+
+@utility drift-b {
+  animation: drift2 11s ease-in-out infinite alternate;
+}
+
+@utility drift-c {
+  animation: drift 13s ease-in-out infinite alternate;
+}
+
+@utility step-in {
+  animation: slide-in 0.45s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+@media print {
+  body {
+    background: #fff;
+  }
+  .print-hide {
+    display: none !important;
+  }
+  .print-sheet {
+    position: static !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    transform: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+}

@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>LanProbe — Offline LAN Speed &amp; Link Tester</title>
+<meta name="description" content="Single-phone LAN tester: check reachability, latency, jitter, packet loss and throughput to cameras, NVRs, routers, switches and APs — fully offline." />
+<meta name="theme-color" content="#070b16" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b1020'/%3E%3Cpath d='M6 21l6-9 5 6 3-4 6 7' stroke='%2334e0d0' stroke-width='2.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+<style>
+:root{
+  --bg:#070b16; --bg2:#0b1224; --panel:#0e1730; --panel2:#132043;
+  --line:#1e2b4d; --line2:#2a3c66;
+  --txt:#e8eefc; --dim:#8ea0c6; --faint:#5f7096;
+  --cy:#34e0d0; --vi:#7c8cff; --lime:#a8e05f;
+  --ok:#2ee6a8; --warn:#ffc857; --bad:#ff5d73;
+  --r:14px;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Roboto Mono",monospace;
+  --sans:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:
+    radial-gradient(900px 520px at 12% -12%, rgba(124,140,255,.20), transparent 60%),
+    radial-gradient(760px 460px at 96% 4%, rgba(52,224,208,.16), transparent 62%),
+    var(--bg);
+  color:var(--txt); font-family:var(--sans); -webkit-text-size-adjust:100%;
+  min-height:100vh; padding-bottom:96px;
+}
+a{color:var(--cy)}
+.wrap{max-width:1080px;margin:0 auto;padding:16px}
+header.top{display:flex;align-items:center;gap:12px;padding:6px 0 14px}
+.logo{width:40px;height:40px;border-radius:12px;flex:0 0 auto;
+  background:linear-gradient(140deg,var(--cy),var(--vi));display:grid;place-items:center;
+  box-shadow:0 8px 26px -10px rgba(52,224,208,.7)}
+.logo svg{width:24px;height:24px}
+h1{font-size:19px;margin:0;letter-spacing:.4px}
+.sub{font-size:12px;color:var(--dim);margin-top:2px}
+.badge{margin-left:auto;font:600 10px/1 var(--mono);letter-spacing:.16em;color:var(--cy);
+  border:1px solid rgba(52,224,208,.35);background:rgba(52,224,208,.08);padding:7px 9px;border-radius:999px}
+
+.card{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--line);
+  border-radius:var(--r);padding:14px;margin-bottom:14px;box-shadow:0 18px 40px -28px #000}
+.card h2{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin:0 0 12px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.grid{display:grid;gap:10px;grid-template-columns:1fr 1fr}
+@media(max-width:640px){.grid{grid-template-columns:1fr}}
+label{display:block;font-size:11px;color:var(--dim);margin:0 0 5px;letter-spacing:.06em;text-transform:uppercase}
+input,select{width:100%;background:#08101f;border:1px solid var(--line);color:var(--txt);
+  border-radius:10px;padding:11px 12px;font-size:15px;font-family:var(--mono);outline:none}
+input:focus,select:focus{border-color:var(--cy);box-shadow:0 0 0 3px rgba(52,224,208,.14)}
+select{font-family:var(--sans)}
+.hint{font-size:11px;color:var(--faint);margin-top:5px;line-height:1.5}
+button{font-family:var(--sans);cursor:pointer;border-radius:11px;border:1px solid var(--line);
+  background:var(--panel2);color:var(--txt);padding:11px 14px;font-size:14px;font-weight:600}
+button:active{transform:translateY(1px)}
+button.primary{border:0;color:#04121a;background:linear-gradient(135deg,var(--cy),#63f0c8);
+  box-shadow:0 12px 28px -14px rgba(52,224,208,.9)}
+button.violet{border:0;color:#0a0f24;background:linear-gradient(135deg,var(--vi),#a9b4ff)}
+button.ghost{background:transparent;color:var(--dim)}
+button.sm{padding:8px 10px;font-size:12px;border-radius:9px}
+button:disabled{opacity:.45}
+.grow{flex:1 1 160px}
+
+.devs{display:grid;gap:10px;grid-template-columns:1fr 1fr}
+@media(max-width:760px){.devs{grid-template-columns:1fr}}
+.dev{border:1px solid var(--line);border-radius:12px;padding:12px;background:#0a1224}
+.dev .dh{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.dot{width:9px;height:9px;border-radius:50%;background:#39466b;box-shadow:0 0 0 3px rgba(255,255,255,.03)}
+.dot.ok{background:var(--ok);box-shadow:0 0 12px var(--ok)}
+.dot.warn{background:var(--warn);box-shadow:0 0 12px var(--warn)}
+.dot.bad{background:var(--bad);box-shadow:0 0 12px var(--bad)}
+.dev .nm{font-weight:700;font-size:14px}
+.dev .tag{margin-left:auto;font:600 10px/1 var(--mono);color:var(--vi);letter-spacing:.1em;
+  border:1px solid rgba(124,140,255,.3);padding:5px 7px;border-radius:7px;text-transform:uppercase}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.stat{background:#08101f;border:1px solid var(--line);border-radius:10px;padding:9px 10px;text-align:center}
+.stat .v{font-family:var(--mono);font-size:17px;font-weight:700;letter-spacing:-.5px}
+.stat .k{font-size:9px;color:var(--faint);letter-spacing:.14em;text-transform:uppercase;margin-top:3px}
+.v.ok{color:var(--ok)}.v.warn{color:var(--warn)}.v.bad{color:var(--bad)}.v.cy{color:var(--cy)}
+canvas{width:100%;height:64px;display:block;margin-top:10px;border-radius:8px;background:#08101f;border:1px solid var(--line)}
+
+.verdict{border-radius:12px;padding:14px;border:1px solid var(--line);background:#0a1224}
+.verdict .t{font-size:16px;font-weight:800;margin-bottom:6px}
+.verdict p{margin:0;font-size:13px;color:var(--dim);line-height:1.6}
+.verdict.ok{border-color:rgba(46,230,168,.4);background:rgba(46,230,168,.07)}
+.verdict.warn{border-color:rgba(255,200,87,.4);background:rgba(255,200,87,.07)}
+.verdict.bad{border-color:rgba(255,93,115,.4);background:rgba(255,93,115,.07)}
+.verdict.ok .t{color:var(--ok)}.verdict.warn .t{color:var(--warn)}.verdict.bad .t{color:var(--bad)}
+
+table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+th{text-align:left;color:var(--faint);font-weight:600;font-size:10px;letter-spacing:.12em;
+  text-transform:uppercase;padding:7px 8px;border-bottom:1px solid var(--line)}
+td{padding:7px 8px;border-bottom:1px solid rgba(30,43,77,.55);color:var(--dim)}
+.scroll{overflow:auto;max-height:280px;-webkit-overflow-scrolling:touch}
+.log{font-family:var(--mono);font-size:11.5px;color:var(--dim);background:#08101f;border:1px solid var(--line);
+  border-radius:10px;padding:10px;max-height:190px;overflow:auto;line-height:1.7;white-space:pre-wrap;word-break:break-all}
+.bar{position:fixed;left:0;right:0;bottom:0;padding:10px 14px calc(10px + env(safe-area-inset-bottom));
+  background:rgba(7,11,22,.92);backdrop-filter:blur(12px);border-top:1px solid var(--line);z-index:9}
+.bar .wrap{padding:0;display:flex;gap:10px}
+.bar button{flex:1}
+details summary{cursor:pointer;color:var(--cy);font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+details[open] summary{margin-bottom:10px}
+.kv{font-size:12px;color:var(--dim);line-height:1.8}
+.kv b{color:var(--txt)}
+.pill{display:inline-block;font:600 10px/1 var(--mono);padding:5px 8px;border-radius:7px;margin:0 5px 5px 0;
+  border:1px solid var(--line);color:var(--dim);cursor:pointer;background:#08101f}
+.pill:hover{border-color:var(--cy);color:var(--cy)}
+.prog{height:4px;border-radius:99px;background:#101b36;overflow:hidden;margin-top:10px}
+.prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cy),var(--vi));transition:width .2s}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="logo"><svg viewBox="0 0 32 32"><path d="M5 22l7-10 5 6 3-4 7 8" stroke="#04121a" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div>
+      <h1>LanProbe</h1>
+      <div class="sub">Offline LAN link &amp; speed tester — one phone, two devices</div>
+    </div>
+    <span class="badge" id="netBadge">LOCAL</span>
+  </header>
+
+  <div class="card">
+    <h2>Devices under test</h2>
+    <div class="devs" id="devForms"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="sm ghost" id="swapBtn">⇄ Swap A/B</button>
+      <button class="sm ghost" id="scanBtn">◎ Detect ports</button>
+      <button class="sm ghost" id="resetBtn">↺ Reset</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Test profile</h2>
+    <div class="grid">
+      <div><label>Test target</label><select id="scope">
+        <option value="A">Mobile → Device A only</option>
+        <option value="B">Mobile → Device B only</option>
+        <option value="AB" selected>Mobile → A and B (both)</option>
+      </select></div>
+      <div><label>Mode</label><select id="mode">
+        <option value="quick">Quick — 10 probes</option>
+        <option value="standard" selected>Standard — 25 probes + throughput</option>
+        <option value="deep">Deep — 60 probes + throughput</option>
+        <option value="monitor">Monitor — continuous until stopped</option>
+      </select></div>
+      <div><label>Probe timeout (ms)</label><input id="timeout" type="number" value="2000" min="300" step="100" /></div>
+      <div><label>Interval between probes (ms)</label><input id="interval" type="number" value="250" min="0" step="50" /></div>
+      <div><label>Throughput samples per device</label><input id="thSamples" type="number" value="6" min="0" max="30" /></div>
+    </div>
+    <div class="hint">A phone's browser measures <b>phone → device</b>. Running both sides back-to-back on the same Wi-Fi shows whether the camera↔NVR path is healthy, and which leg is the weak one.</div>
+    <div class="prog"><i id="prog"></i></div>
+  </div>
+
+  <div class="card">
+    <h2>Live results</h2>
+    <div class="devs" id="results"></div>
+    <div id="verdictBox" style="margin-top:12px"></div>
+  </div>
+
+  <div class="card">
+    <h2>Probe history</h2>
+    <div class="scroll"><table id="histTable">
+      <thead><tr><th>#</th><th>Device</th><th>Result</th><th>RTT</th><th>Throughput</th><th>Time</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <div class="row" style="margin-top:10px">
+      <button class="sm ghost" id="csvBtn">⭳ Export CSV</button>
+      <button class="sm ghost" id="clearBtn">✕ Clear history</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <details>
+      <summary>Diagnostics log</summary>
+      <div class="log" id="log"></div>
+    </details>
+  </div>
+
+  <div class="card">
+    <details>
+      <summary>How each metric is measured (read this once)</summary>
+      <div class="kv">
+        <p><b>Reachability / RTT</b> — timed HTTP request to the device's IP and port. An answer of any kind (page, redirect, auth challenge, protocol mismatch) proves the device is alive on the LAN and gives round-trip time.</p>
+        <p><b>Jitter</b> — average variation between consecutive RTTs. Above ~30&nbsp;ms video stutters even when speed looks fine.</p>
+        <p><b>Loss</b> — probes that never answered within the timeout. Anything above 1% on a wired camera link means a cable, port or interference problem.</p>
+        <p><b>Throughput</b> — repeatedly pulls the snapshot image (cameras) and measures bytes/second. For routers, switches and APs with no image endpoint, the tool falls back to page-fetch timing and reports latency-grade only.</p>
+        <p><b>RTSP / stream ports</b> — browsers cannot speak RTSP, so port 554 (and 8554, 37777, 34567, 8000) is tested for <i>reachability</i> only: a fast rejection means the port is open and talking a non-HTTP protocol; a timeout means blocked or closed.</p>
+        <p><b>Offline</b> — no internet, CDN, tracking or server. Everything runs inside this page on your LAN.</p>
+      </div>
+    </details>
+  </div>
+</div>
+
+<div class="bar"><div class="wrap">
+  <button class="primary" id="runBtn">▶ Run test</button>
+  <button class="violet" id="stopBtn" disabled>■ Stop</button>
+</div></div>
+
+<script>
+"use strict";
+/* ---------------------------------------------------------------- config */
+var TYPES = {
+  camera:{label:"IP Camera", port:80, paths:["/snapshot.jpg","/cgi-bin/snapshot.cgi","/onvif-http/snapshot","/image/jpeg.cgi","/tmpfs/auto.jpg","/axis-cgi/jpg/image.cgi","/ISAPI/Streaming/channels/101/picture"], ports:[80,8000,8080,554,88], img:true},
+  nvr:{label:"NVR / DVR", port:80, paths:["/","/doc/page/login.asp","/cgi-bin/snapshot.cgi"], ports:[80,8000,8080,554,37777,34567], img:false},
+  router:{label:"Router / Gateway", port:80, paths:["/","/favicon.ico","/login.html"], ports:[80,443,8080,53,22,23], img:false},
+  switchx:{label:"Switch (managed)", port:80, paths:["/","/favicon.ico"], ports:[80,443,161,22,23], img:false},
+  ap:{label:"Access Point", port:80, paths:["/","/favicon.ico"], ports:[80,443,8080,22], img:false},
+  server:{label:"Server / PC / Phone", port:80, paths:["/","/favicon.ico"], ports:[80,443,8080,3000,5000,445], img:false},
+  other:{label:"Other device", port:80, paths:["/","/favicon.ico"], ports:[80,443,554,8080], img:false}
+};
+var DEF = {
+  A:{name:"Camera",  type:"camera", ip:"192.168.1.108", port:80, path:"/snapshot.jpg", scheme:"http", kb:0},
+  B:{name:"NVR",     type:"nvr",    ip:"192.168.1.200", port:80, path:"/",             scheme:"http", kb:0}
+};
+var LS="lanprobe.v1";
+var state = load();
+var running=false, stopFlag=false, hist=[], seq=0;
+var live={A:blank(),B:blank()};
+
+function blank(){return{sent:0,ok:0,fail:0,rtts:[],thr:[],last:null,openPorts:[]};}
+function load(){try{var s=JSON.parse(localStorage.getItem(LS));if(s&&s.A&&s.B)return s;}catch(e){}return JSON.parse(JSON.stringify(DEF));}
+function save(){try{localStorage.setItem(LS,JSON.stringify(state));}catch(e){}}
+function $(id){return document.getElementById(id);}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+function log(m){var el=$("log");el.textContent+="["+new Date().toLocaleTimeString()+"] "+m+"\n";el.scrollTop=el.scrollHeight;}
+
+/* ---------------------------------------------------------------- forms */
+function renderForms(){
+  $("devForms").innerHTML = ["A","B"].map(function(k){
+    var d=state[k], t=TYPES[d.type]||TYPES.other;
+    return '<div class="dev"><div class="dh"><span class="dot" id="fd'+k+'"></span>'+
+      '<span class="nm">Device '+k+'</span><span class="tag">'+esc(t.label)+'</span></div>'+
+      '<div class="grid" style="grid-template-columns:1fr 1fr">'+
+        '<div><label>Label</label><input data-k="'+k+'" data-f="name" value="'+esc(d.name)+'" /></div>'+
+        '<div><label>Type</label><select data-k="'+k+'" data-f="type">'+
+          Object.keys(TYPES).map(function(tk){return '<option value="'+tk+'"'+(tk===d.type?" selected":"")+'>'+TYPES[tk].label+'</option>';}).join("")+
+        '</select></div>'+
+        '<div><label>IP / host</label><input data-k="'+k+'" data-f="ip" inputmode="decimal" value="'+esc(d.ip)+'" /></div>'+
+        '<div><label>Port</label><input data-k="'+k+'" data-f="port" type="number" value="'+esc(d.port)+'" /></div>'+
+        '<div><label>Scheme</label><select data-k="'+k+'" data-f="scheme">'+
+          ["http","https"].map(function(s){return '<option'+(s===d.scheme?" selected":"")+'>'+s+'</option>';}).join("")+'</select></div>'+
+        '<div><label>Snapshot size (KB, optional)</label><input data-k="'+k+'" data-f="kb" type="number" value="'+esc(d.kb||0)+'" /></div>'+
+      '</div>'+
+      '<div style="margin-top:10px"><label>Probe path</label><input data-k="'+k+'" data-f="path" value="'+esc(d.path)+'" /></div>'+
+      '<div style="margin-top:8px">'+t.paths.map(function(p){return '<span class="pill" data-set="'+k+'" data-path="'+esc(p)+'">'+esc(p)+'</span>';}).join("")+'</div>'+
+      '<div class="hint">'+(t.img?"Snapshot path gives real throughput numbers. Enter the snapshot size in KB if the camera blocks size reporting.":"No image endpoint expected — latency, jitter and loss are the meaningful numbers here.")+'</div>'+
+    '</div>';
+  }).join("");
+
+  Array.prototype.forEach.call($("devForms").querySelectorAll("input,select"),function(el){
+    el.addEventListener("change",function(){
+      var k=el.getAttribute("data-k"), f=el.getAttribute("data-f");
+      var v=(f==="port"||f==="kb")?(parseInt(el.value,10)||0):el.value.trim();
+      state[k][f]=v;
+      if(f==="type"){var t=TYPES[v]||TYPES.other;state[k].port=t.port;state[k].path=t.paths[0];}
+      save();renderForms();
+    });
+  });
+  Array.prototype.forEach.call($("devForms").querySelectorAll(".pill"),function(el){
+    el.addEventListener("click",function(){
+      state[el.getAttribute("data-set")].path=el.getAttribute("data-path");save();renderForms();
+    });
+  });
+}
+
+/* ---------------------------------------------------------------- probing */
+function url(d,path,bust){
+  var p=(path===undefined?d.path:path)||"/";
+  if(p.charAt(0)!=="/")p="/"+p;
+  var base=d.scheme+"://"+d.ip+(d.port&&d.port!==(d.scheme==="https"?443:80)?":"+d.port:"")+p;
+  return base+(base.indexOf("?")<0?"?":"&")+"_lp="+Date.now()+"_"+(bust||Math.random().toString(36).slice(2,7));
+}
+/* Timed HTTP probe. Any answer (even an opaque/blocked one) proves the host answered. */
+function probe(d,path,timeoutMs){
+  return new Promise(function(res){
+    var t0=performance.now(), done=false, ctl=("AbortController" in window)?new AbortController():null;
+    var timer=setTimeout(function(){ if(done)return; done=true; if(ctl)try{ctl.abort();}catch(e){}
+      res({state:"timeout",rtt:timeoutMs}); },timeoutMs);
+    function fin(st){ if(done)return; done=true; clearTimeout(timer);
+      res({state:st,rtt:Math.max(1,Math.round(performance.now()-t0))}); }
+    var opts={mode:"no-cors",cache:"no-store",redirect:"follow"};
+    if(ctl)opts.signal=ctl.signal;
+    fetch(url(d,path),opts).then(function(){fin("ok");},function(){ fin("answered"); });
+  });
+}
+/* Throughput via snapshot download. Uses Resource Timing bytes when exposed, else the KB hint. */
+function throughput(d,timeoutMs){
+  return new Promise(function(res){
+    var u=url(d), t0=performance.now(), img=new Image(), done=false;
+    var timer=setTimeout(function(){if(done)return;done=true;img.src="";res(null);},Math.max(timeoutMs*3,4000));
+    function finish(okFlag){
+      if(done)return;done=true;clearTimeout(timer);
+      if(!okFlag)return res(null);
+      var ms=Math.max(1,performance.now()-t0), bytes=0;
+      try{
+        var e=performance.getEntriesByName(u);
+        if(e.length){var last=e[e.length-1];bytes=last.transferSize||last.encodedBodySize||last.decodedBodySize||0;}
+      }catch(err){}
+      if(!bytes&&d.kb)bytes=d.kb*1024;
+      if(!bytes)return res({ms:ms,bytes:0,mbps:null});
+      res({ms:ms,bytes:bytes,mbps:(bytes*8)/(ms/1000)/1e6});
+    }
+    img.onload=function(){finish(true);}; img.onerror=function(){finish(false);};
+    img.src=u;
+  });
+}
+function portScan(d){
+  var t=TYPES[d.type]||TYPES.other, list=t.ports.slice(0), out=[];
+  var to=Math.max(700,Math.min(1500,parseInt($("timeout").value,10)||1200));
+  return list.reduce(function(chain,p){
+    return chain.then(function(){
+      var probeDev={scheme:"http",ip:d.ip,port:p,path:"/"};
+      return probe(probeDev,"/",to).then(function(r){
+        if(r.state!=="timeout"){out.push(p);log("port "+d.ip+":"+p+" → open/responding ("+r.rtt+" ms)");}
+        else log("port "+d.ip+":"+p+" → no answer");
+      });
+    });
+  },Promise.resolve()).then(function(){return out;});
+}
+
+/* ---------------------------------------------------------------- math */
+function avg(a){return a.length?a.reduce(function(x,y){return x+y;},0)/a.length:null;}
+function jitter(a){if(a.length<2)return null;var s=0;for(var i=1;i<a.length;i++)s+=Math.abs(a[i]-a[i-1]);return s/(a.length-1);}
+function num(v,dp){return v===null||v===undefined||isNaN(v)?"—":(dp?v.toFixed(dp):Math.round(v));}
+function cls(v,g,w){return v===null?"":(v<=g?"ok":(v<=w?"warn":"bad"));}
+function grade(s){
+  if(!s.sent)return{k:"idle",t:"Not tested yet",m:"Fill in both devices and run a test."};
+  var loss=s.fail/s.sent*100, a=avg(s.rtts), j=jitter(s.rtts);
+  if(s.ok===0)return{k:"bad",t:"Unreachable",m:"No answer on that IP and port from this phone."};
+  if(loss>5||a>250||(j!==null&&j>60))return{k:"bad",t:"Poor link",m:"High loss or latency — expect dropped video."};
+  if(loss>1||a>90||(j!==null&&j>30))return{k:"warn",t:"Marginal link",m:"Usable but unstable under load."};
+  return{k:"ok",t:"Healthy link",m:"Latency, jitter and loss are all inside safe limits."};
+}
+
+/* ---------------------------------------------------------------- render */
+function renderResults(){
+  $("results").innerHTML=["A","B"].map(function(k){
+    var d=state[k], s=live[k], g=grade(s);
+    var loss=s.sent?s.fail/s.sent*100:null, a=avg(s.rtts), j=jitter(s.rtts);
+    var mb=s.thr.filter(function(x){return x&&x.mbps;}).map(function(x){return x.mbps;});
+    var best=mb.length?Math.max.apply(null,mb):null;
+    return '<div class="dev"><div class="dh"><span class="dot '+(g.k==="idle"?"":g.k)+'"></span>'+
+      '<span class="nm">'+esc(d.name||("Device "+k))+'</span>'+
+      '<span class="tag">'+esc(d.ip)+':'+esc(d.port)+'</span></div>'+
+      '<div class="stats">'+
+        '<div class="stat"><div class="v '+cls(a,50,120)+'">'+num(a)+'</div><div class="k">Avg RTT ms</div></div>'+
+        '<div class="stat"><div class="v '+cls(j,15,35)+'">'+num(j)+'</div><div class="k">Jitter ms</div></div>'+
+        '<div class="stat"><div class="v '+cls(loss,0.5,3)+'">'+(loss===null?"—":loss.toFixed(1))+'</div><div class="k">Loss %</div></div>'+
+        '<div class="stat"><div class="v cy">'+(best===null?"—":best.toFixed(1))+'</div><div class="k">Mbps peak</div></div>'+
+        '<div class="stat"><div class="v">'+(s.rtts.length?num(Math.min.apply(null,s.rtts)):"—")+'/'+(s.rtts.length?num(Math.max.apply(null,s.rtts)):"—")+'</div><div class="k">Min / Max</div></div>'+
+        '<div class="stat"><div class="v">'+s.ok+'/'+s.sent+'</div><div class="k">Replies</div></div>'+
+      '</div>'+
+      (s.openPorts.length?'<div class="hint">Responding ports: <b style="color:var(--cy)">'+s.openPorts.join(", ")+'</b></div>':'')+
+      '<canvas id="cv'+k+'" height="64"></canvas>'+
+    '</div>';
+  }).join("");
+  ["A","B"].forEach(function(k){spark($("cv"+k),live[k].rtts);});
+  renderVerdict();
+}
+function spark(cv,data){
+  if(!cv)return; var dpr=window.devicePixelRatio||1, w=cv.clientWidth||300, h=64;
+  cv.width=w*dpr;cv.height=h*dpr;var c=cv.getContext("2d");c.scale(dpr,dpr);c.clearRect(0,0,w,h);
+  c.strokeStyle="rgba(30,43,77,.9)";c.lineWidth=1;
+  for(var i=1;i<4;i++){c.beginPath();c.moveTo(0,h/4*i);c.lineTo(w,h/4*i);c.stroke();}
+  if(data.length<2){c.fillStyle="#5f7096";c.font="11px monospace";c.fillText("awaiting probes…",10,36);return;}
+  var mx=Math.max.apply(null,data)*1.15||1, pts=data.slice(-90);
+  var g=c.createLinearGradient(0,0,w,0);g.addColorStop(0,"#34e0d0");g.addColorStop(1,"#7c8cff");
+  c.beginPath();
+  pts.forEach(function(v,i){var x=i/(pts.length-1)*(w-6)+3,y=h-6-(v/mx)*(h-14);i?c.lineTo(x,y):c.moveTo(x,y);});
+  c.strokeStyle=g;c.lineWidth=2;c.lineJoin="round";c.stroke();
+  c.lineTo(w-3,h);c.lineTo(3,h);c.closePath();
+  var f=c.createLinearGradient(0,0,0,h);f.addColorStop(0,"rgba(52,224,208,.28)");f.addColorStop(1,"rgba(52,224,208,0)");
+  c.fillStyle=f;c.fill();
+}
+function renderVerdict(){
+  var A=grade(live.A), B=grade(live.B), box=$("verdictBox");
+  if(A.k==="idle"&&B.k==="idle"){box.innerHTML='<div class="verdict"><div class="t">Ready</div><p>Pick a test target above (Device A only, B only, or both) and press Run test.</p></div>';return;}
+  if(A.k!=="idle"&&B.k==="idle"){
+    var aA0=avg(live.A.rtts);
+    box.innerHTML='<div class="verdict '+A.k+'"><div class="t">'+esc(A.t)+' — Mobile → '+esc(state.A.name)+'</div><p>'+esc(state.A.name)+' '+A.t.toLowerCase()+'. '+esc(A.m)+
+      (aA0?' Average round trip from this phone: <b>~'+Math.round(aA0)+' ms</b>.':'')+'</p></div>';return;
+  }
+  if(B.k!=="idle"&&A.k==="idle"){
+    var aB0=avg(live.B.rtts);
+    box.innerHTML='<div class="verdict '+B.k+'"><div class="t">'+esc(B.t)+' — Mobile → '+esc(state.B.name)+'</div><p>'+esc(state.B.name)+' '+B.t.toLowerCase()+'. '+esc(B.m)+
+      (aB0?' Average round trip from this phone: <b>~'+Math.round(aB0)+' ms</b>.':'')+'</p></div>';return;
+  }
+  var order={ok:0,warn:1,bad:2,idle:0}, worst=order[A.k]>=order[B.k]?A:B, weak=order[A.k]>order[B.k]?state.A.name:(order[B.k]>order[A.k]?state.B.name:null);
+  var aA=avg(live.A.rtts), aB=avg(live.B.rtts);
+  var msg=[];
+  msg.push(esc(state.A.name)+": "+A.t.toLowerCase()+". "+esc(state.B.name)+": "+B.t.toLowerCase()+".");
+  if(weak)msg.push("The weaker leg is <b>"+esc(weak)+"</b> — start troubleshooting there (cable, PoE port, channel congestion).");
+  if(aA&&aB)msg.push("Estimated "+esc(state.A.name)+" ↔ "+esc(state.B.name)+" round trip through this network: <b>~"+Math.round(aA+aB)+" ms</b>.");
+  if(worst.k==="ok")msg.push("Both legs are clean, so the camera-to-recorder path should carry the stream without drops.");
+  box.innerHTML='<div class="verdict '+worst.k+'"><div class="t">'+esc(worst.t==="Healthy link"?"Path looks healthy":worst.t)+'</div><p>'+msg.join(" ")+'</p></div>';
+}
+function pushHist(k,r,th){
+  seq++;
+  hist.push({n:seq,dev:state[k].name||k,res:r.state,rtt:r.rtt,mbps:th&&th.mbps?th.mbps.toFixed(2):"",time:new Date().toLocaleTimeString()});
+  if(hist.length>500)hist.shift();
+  var tb=$("histTable").querySelector("tbody");
+  var tr=document.createElement("tr");
+  var color=r.state==="timeout"?"var(--bad)":"var(--ok)";
+  tr.innerHTML='<td>'+seq+'</td><td>'+esc(state[k].name||k)+'</td><td style="color:'+color+'">'+r.state+'</td><td>'+r.rtt+' ms</td><td>'+(th&&th.mbps?th.mbps.toFixed(2)+" Mbps":"—")+'</td><td>'+new Date().toLocaleTimeString()+'</td>';
+  tb.insertBefore(tr,tb.firstChild);
+  while(tb.children.length>200)tb.removeChild(tb.lastChild);
+}
+
+/* ---------------------------------------------------------------- runner */
+function counts(){var m=$("mode").value;return m==="quick"?10:m==="standard"?25:m==="deep"?60:Infinity;}
+function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
+
+async function run(){
+  if(running)return;
+  running=true;stopFlag=false;
+  $("runBtn").disabled=true;$("stopBtn").disabled=false;
+  live.A=blank();live.B=blank();hist=[];seq=0;
+  $("histTable").querySelector("tbody").innerHTML="";
+  renderResults();
+  var total=counts(), to=parseInt($("timeout").value,10)||2000, iv=parseInt($("interval").value,10)||0;
+  var thN=parseInt($("thSamples").value,10)||0;
+  log("Test started · mode="+$("mode").value+" · timeout="+to+"ms");
+  var scope=$("scope").value;
+  var keys=scope==="AB"?["A","B"]:[scope];
+  log("Target: "+(scope==="AB"?"A and B":"Device "+scope));
+  var i=0;
+  while(i<total&&!stopFlag){
+    for(var idx=0;idx<keys.length&&!stopFlag;idx++){
+      var k=keys[idx], d=state[k];
+      if(!d.ip){continue;}
+      var r=await probe(d,undefined,to);
+      var s=live[k];s.sent++;s.last=r;
+      if(r.state==="timeout")s.fail++;else{s.ok++;s.rtts.push(r.rtt);}
+      var th=null;
+      if(thN&&(TYPES[d.type]||{}).img&&i<thN&&r.state!=="timeout"){
+        th=await throughput(d,to);
+        if(th&&th.mbps)s.thr.push(th);
+      }
+      pushHist(k,r,th);
+    }
+    i++;
+    if(total!==Infinity)$("prog").style.width=Math.min(100,i/total*100)+"%";
+    renderResults();
+    if(iv&&!stopFlag)await sleep(iv);
+  }
+  log("Test finished · "+(live.A.sent+live.B.sent)+" probes sent");
+  running=false;stopFlag=false;
+  $("runBtn").disabled=false;$("stopBtn").disabled=true;
+  if(total!==Infinity)$("prog").style.width="100%";
+  renderResults();
+}
+
+/* ---------------------------------------------------------------- wiring */
+$("runBtn").addEventListener("click",run);
+$("stopBtn").addEventListener("click",function(){stopFlag=true;log("Stop requested.");});
+$("swapBtn").addEventListener("click",function(){var t=state.A;state.A=state.B;state.B=t;save();renderForms();renderResults();});
+$("resetBtn").addEventListener("click",function(){state=JSON.parse(JSON.stringify(DEF));save();renderForms();live.A=blank();live.B=blank();renderResults();});
+$("clearBtn").addEventListener("click",function(){hist=[];seq=0;$("histTable").querySelector("tbody").innerHTML="";});
+$("csvBtn").addEventListener("click",function(){
+  var rows=[["n","device","result","rtt_ms","mbps","time"]].concat(hist.map(function(h){return [h.n,h.dev,h.res,h.rtt,h.mbps,h.time];}));
+  var csv=rows.map(function(r){return r.join(",");}).join("\n");
+  var a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+  a.download="lanprobe-"+Date.now()+".csv";a.click();
+});
+$("scanBtn").addEventListener("click",async function(){
+  if(running)return;
+  this.disabled=true;log("Port detection started…");
+  for(var idx=0;idx<2;idx++){var k=idx?"B":"A";
+    if(!state[k].ip)continue;
+    live[k].openPorts=await portScan(state[k]);
+    renderResults();
+  }
+  log("Port detection done.");this.disabled=false;
+});
+$("mode").addEventListener("change",function(){
+  if(this.value==="monitor")$("prog").style.width="0%";
+});
+window.addEventListener("resize",function(){["A","B"].forEach(function(k){spark($("cv"+k),live[k].rtts);});});
+$("netBadge").textContent=(location.protocol==="https:"?"HTTPS — use http devices via local build":"LOCAL");
+
+renderForms();renderResults();
+log("LanProbe ready. Fully offline — nothing leaves your network.");
+</script>
+</body>
+</html>
